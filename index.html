@@ -207,14 +207,12 @@ function toast(msg,err=false){
 }
 
 function nav(page){
-  try{
-    S.page=page;S.editDoc=null;
-    document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-    render();
-  }catch(err){
-    console.error('nav() error:',err);
-    document.getElementById('content').innerHTML='<div style="padding:2rem;color:red;font-size:13px"><strong>Nav Error:</strong> '+err.message+'</div>';
-  }
+  S.page=page;
+  S.editDoc=null;
+  document.querySelectorAll('.nav-item').forEach(function(el){
+    el.classList.toggle('active', el.dataset.page===page);
+  });
+  render();
 }
 
 function render(){
@@ -229,6 +227,7 @@ function render(){
     else if(S.page==='products')ta.appendChild(mkBtn('+ Add Product','btn-primary',()=>newDoc('product')));
   }
   const c=document.getElementById('content');
+  if(!c)return;
   if(S.editDoc){
     const t=S.editDoc._t;
     if(t==='quote'||t==='po')c.innerHTML=renderEditor();
@@ -247,7 +246,8 @@ function render(){
 }
 
 function renderDash(){
-  const tq=S.quotes.reduce((a,q)=>a+q.total,0),tp=S.pos.reduce((a,p)=>a+p.total,0);
+  const tq=S.quotes.reduce((a,q)=>a+(parseFloat(q.total)||0),0);
+  const tp=S.pos.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
   const rq=[...S.quotes].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
   const rp=[...S.pos].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,2);
   return`<div class="stats-grid">
@@ -856,34 +856,62 @@ async function fbDelDoc(col, fbid){
 
 async function bootstrap(){
   setSyncDot('connecting');
-  render();
+  // Show loading screen while Firebase connects
+  var c=document.getElementById('content');
+  if(c) c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:#6b7280"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#185FA5;border-radius:50%;animation:spin .7s linear infinite"></div><span style="font-size:13px">Connecting to database...</span></div>';
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
-    // Load settings
-    const sSnap = await db.collection('settings').doc('org').get();
-    if(sSnap.exists){ Object.assign(S.settings, sSnap.data()); render(); }
-    // Live listeners
+
+    // Load settings first
+    try{
+      const sSnap = await db.collection('settings').doc('org').get();
+      if(sSnap.exists){ const d=sSnap.data(); delete d._updated; Object.assign(S.settings, d); }
+    }catch(e){ console.warn('Settings load failed:',e); }
+
+    // Setup live listeners - each one triggers render when data arrives
+    var loaded = {q:false, p:false, v:false, pr:false};
+    function checkAllLoaded(){
+      if(loaded.q&&loaded.p&&loaded.v&&loaded.pr){ setSyncDot('live'); render(); }
+    }
+
     db.collection(COLS.quotes).onSnapshot(function(snap){
       S.quotes = snap.docs.map(cleanRow);
+      loaded.q=true; checkAllLoaded();
       if(!S.editDoc&&(S.page==='quotes'||S.page==='dashboard')) render();
-    });
+    }, function(e){ console.error('quotes listener:',e); loaded.q=true; checkAllLoaded(); });
+
     db.collection(COLS.pos).onSnapshot(function(snap){
       S.pos = snap.docs.map(cleanRow);
+      loaded.p=true; checkAllLoaded();
       if(!S.editDoc&&(S.page==='pos'||S.page==='dashboard')) render();
-    });
+    }, function(e){ console.error('pos listener:',e); loaded.p=true; checkAllLoaded(); });
+
     db.collection(COLS.vendors).onSnapshot(function(snap){
       S.vendors = snap.docs.map(cleanRow);
+      loaded.v=true; checkAllLoaded();
       if(!S.editDoc&&S.page==='vendors') render();
-    });
+    }, function(e){ console.error('vendors listener:',e); loaded.v=true; checkAllLoaded(); });
+
     db.collection(COLS.products).onSnapshot(function(snap){
       S.products = snap.docs.map(cleanRow);
+      loaded.pr=true; checkAllLoaded();
       if(!S.editDoc&&S.page==='products') render();
-    });
-    setSyncDot('live');
+    }, function(e){ console.error('products listener:',e); loaded.pr=true; checkAllLoaded(); });
+
+    // Fallback: if not loaded in 5 seconds, render anyway
+    setTimeout(function(){
+      if(!loaded.q||!loaded.p||!loaded.v||!loaded.pr){
+        console.warn('Firebase timeout - rendering with local data');
+        setSyncDot('error');
+        render();
+      }
+    }, 5000);
+
   }catch(e){
-    console.error('Firebase error:', e);
+    console.error('Firebase bootstrap error:', e);
     setSyncDot('error');
+    render(); // render with local data on error
   }
 }
 
