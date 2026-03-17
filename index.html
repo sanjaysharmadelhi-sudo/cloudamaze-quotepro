@@ -169,7 +169,7 @@ const LOGO_B64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQ
 
 const S = {
   page:'dashboard', editDoc:null,
-  settings:{ orgName:'CloudAmaze India Pvt. Ltd.', orgEmail:'sanjay@cloudamaze.in', orgPhone:'', orgAddress:'Plot No. 4, 1st Floor, Veer Savarkar Block, Shakarpur, East Delhi – 110092', gst:'09AAMCC1324N1ZE', cin:'U62099UP2024PTC209459', pan:'AAMCC1324N', o365Token:'', o365From:'' },
+  settings:{ orgName:'CloudAmaze India Pvt. Ltd.', orgEmail:'sanjay@cloudamaze.in', orgPhone:'', orgAddress:'Plot No. 4, 1st Floor, Veer Savarkar Block, Shakarpur, East Delhi - 110092', gst:'09AAMCC1324N1ZE', cin:'U62099UP2024PTC209459', pan:'AAMCC1324N', o365Token:'', o365From:'' },
   quotes:[
     {id:'Q-001',client:'Acme Corp',clientEmail:'accounts@acme.com',date:'2026-03-10',due:'2026-03-25',status:'sent',ref:'',notes:'',total:14161,items:[{desc:'Web Design Package',qty:1,price:8000},{desc:'SEO Setup',qty:1,price:2500},{desc:'Hosting (12 mo)',qty:12,price:162.5}]},
     {id:'Q-002',client:'TechVentures Ltd',clientEmail:'finance@techventures.in',date:'2026-03-12',due:'2026-03-30',status:'draft',ref:'',notes:'',total:8024,items:[{desc:'Custom API Integration',qty:1,price:5500},{desc:'Support Package',qty:3,price:433.33}]},
@@ -180,8 +180,8 @@ const S = {
     {id:'PO-002',vendor:'TechHardware Inc',vendorEmail:'sales@techhardware.in',date:'2026-03-11',due:'2026-03-25',status:'pending',ref:'',notes:'',total:10207,items:[{desc:'Laptop - Core i7',qty:3,price:1800},{desc:'External SSDs',qty:5,price:130},{desc:'USB-C Hubs',qty:8,price:75}]},
   ],
   vendors:[
-    {id:'V-001',name:'Office Supplies Co',contact:'Lisa Huang',email:'lisa@officesupplies.co',phone:'+91 98765 43210',terms:'Net 30',address:'12, Nehru Place, New Delhi – 110019',gstin:'07AABCO1234P1ZX'},
-    {id:'V-002',name:'TechHardware Inc',contact:'Ravi Patel',email:'ravi@techhardware.in',phone:'+91 99887 76655',terms:'Net 15',address:'B-45, MIDC Andheri, Mumbai – 400093',gstin:'27AABCT5678Q1ZY'},
+    {id:'V-001',name:'Office Supplies Co',contact:'Lisa Huang',email:'lisa@officesupplies.co',phone:'+91 98765 43210',terms:'Net 30',address:'12, Nehru Place, New Delhi - 110019',gstin:'07AABCO1234P1ZX'},
+    {id:'V-002',name:'TechHardware Inc',contact:'Ravi Patel',email:'ravi@techhardware.in',phone:'+91 99887 76655',terms:'Net 15',address:'B-45, MIDC Andheri, Mumbai - 400093',gstin:'27AABCT5678Q1ZY'},
   ],
   products:[
     {id:'P-001',name:'Web Design Package',unit:'project',price:8000,category:'Services'},
@@ -212,7 +212,11 @@ function nav(page){
   document.querySelectorAll('.nav-item').forEach(function(el){
     el.classList.toggle('active', el.dataset.page===page);
   });
-  render();
+  try{ render(); }catch(e){ 
+    console.error(e);
+    var c=document.getElementById('content');
+    if(c) c.innerHTML='<div style="padding:2rem;color:red">Error: '+e.message+'</div>';
+  }
 }
 
 function render(){
@@ -228,17 +232,22 @@ function render(){
   }
   const c=document.getElementById('content');
   if(!c)return;
-  if(S.editDoc){
-    const t=S.editDoc._t;
-    if(t==='quote'||t==='po')c.innerHTML=renderEditor();
-    else if(t==='vendor')c.innerHTML=renderVendorEd();
-    else c.innerHTML=renderProductEd();
-  } else if(S.page==='dashboard')c.innerHTML=renderDash();
-  else if(S.page==='quotes')c.innerHTML=renderList('quote');
-  else if(S.page==='pos')c.innerHTML=renderList('po');
-  else if(S.page==='vendors')c.innerHTML=renderVendors();
-  else if(S.page==='products')c.innerHTML=renderProducts();
-  else if(S.page==='settings')c.innerHTML=renderSettings();
+  try{
+    if(S.editDoc){
+      const t=S.editDoc._t;
+      if(t==='quote'||t==='po')c.innerHTML=renderEditor();
+      else if(t==='vendor')c.innerHTML=renderVendorEd();
+      else c.innerHTML=renderProductEd();
+    } else if(S.page==='dashboard')c.innerHTML=renderDash();
+    else if(S.page==='quotes')c.innerHTML=renderList('quote');
+    else if(S.page==='pos')c.innerHTML=renderList('po');
+    else if(S.page==='vendors')c.innerHTML=renderVendors();
+    else if(S.page==='products')c.innerHTML=renderProducts();
+    else if(S.page==='settings')c.innerHTML=renderSettings();
+  }catch(err){
+    console.error('render error:',err);
+    c.innerHTML='<div style="padding:2rem;background:#fef2f2;border:1px solid red;border-radius:8px;font-size:12px;color:red"><b>Error on '+S.page+' page:</b> '+err.message+'</div>';
+  }
   }catch(err){
     console.error('render() error:',err);
     document.getElementById('content').innerHTML='<div style="padding:2rem;color:red;font-size:13px"><strong>Error:</strong> '+err.message+'<br><br><small>'+err.stack+'</small></div>';
@@ -258,14 +267,14 @@ function renderDash(){
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
     <div class="card">
-      <div class="sec-hdr"><span class="sec-title">Recent Quotes</span><button class="btn btn-sm btn-ghost" onclick="nav('quotes')">View all →</button></div>
+      <div class="sec-hdr"><span class="sec-title">Recent Quotes</span><button class="btn btn-sm btn-ghost" onclick="nav('quotes')">View all &rarr;</button></div>
       <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Client</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
       ${rq.map(q=>`<tr><td style="color:#185FA5;font-weight:600;cursor:pointer" onclick="editDoc('quote','${q.id}')">${q.id}</td><td>${q.client}</td><td>${fmt(q.total)}</td><td>${sb(q.status)}</td>
       <td><div class="action-row"><button class="btn btn-sm" onclick="exportPDF('quote','${q.id}')">PDF</button><button class="btn btn-sm btn-primary" onclick="openEmail('quote','${q.id}')">Email</button></div></td></tr>`).join('')}
       </tbody></table></div>
     </div>
     <div class="card">
-      <div class="sec-hdr"><span class="sec-title">Recent POs</span><button class="btn btn-sm btn-ghost" onclick="nav('pos')">View all →</button></div>
+      <div class="sec-hdr"><span class="sec-title">Recent POs</span><button class="btn btn-sm btn-ghost" onclick="nav('pos')">View all &rarr;</button></div>
       <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Vendor</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
       ${rp.map(p=>`<tr><td style="color:#185FA5;font-weight:600;cursor:pointer" onclick="editDoc('po','${p.id}')">${p.id}</td><td>${p.vendor}</td><td>${fmt(p.total)}</td><td>${sb(p.status)}</td>
       <td><div class="action-row"><button class="btn btn-sm" onclick="exportPDF('po','${p.id}')">PDF</button><button class="btn btn-sm btn-primary" onclick="openEmail('po','${p.id}')">Email</button></div></td></tr>`).join('')}
@@ -275,10 +284,10 @@ function renderDash(){
     <div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:.5rem">&#9432; Real-time Shared Database (Firebase)</div>
     <p style="font-size:12px;color:#0c4a6e;line-height:1.7">Both users share the same live data via <strong>Google Firebase Firestore</strong>. Any save by one user instantly appears for the other.<br><br>
     <strong>Setup steps:</strong><br>
-    1. Go to <a href="https://console.firebase.google.com" target="_blank" style="color:#0369a1">console.firebase.google.com</a> → Create project<br>
-    2. Add a Web app → Copy the config values<br>
-    3. Open this HTML file in a text editor → Replace the 6 <code style="background:#e0f2fe;padding:1px 4px;border-radius:3px">YOUR_*</code> placeholders<br>
-    4. In Firebase Console → Firestore Database → Create database → Start in test mode<br>
+    1. Go to <a href="https://console.firebase.google.com" target="_blank" style="color:#0369a1">console.firebase.google.com</a> - Create project<br>
+    2. Add a Web app - Copy the config values<br>
+    3. Open this HTML file in a text editor - Replace the 6 <code style="background:#e0f2fe;padding:1px 4px;border-radius:3px">YOUR_*</code> placeholders<br>
+    4. In Firebase Console - Firestore Database - Create database - Start in test mode<br>
     5. Upload to GitHub Pages and share the URL with both users</p>
   </div>
   </div>\`;
@@ -288,7 +297,7 @@ function renderList(type){
   const statuses=type==='quote'?['draft','sent','approved','cancelled']:['pending','approved','ordered','cancelled'];
   const lbl=type==='quote'?'Client':'Vendor';
   return`<div class="filter-bar">
-    <input type="text" id="search-inp" placeholder="Search by ID or name…" oninput="filterRows('${type}')">
+    <input type="text" id="search-inp" placeholder="Search by ID or name..." oninput="filterRows('${type}')">
     <select id="status-filter" onchange="filterRows('${type}')" style="width:150px"><option value="">All statuses</option>${statuses.map(s=>`<option>${s}</option>`).join('')}</select>
   </div>
   <div class="table-wrap">
@@ -306,11 +315,11 @@ function listRows(type){
   const sta=sf?sf.value:'';
   return arr.filter(i=>(!srch||i.id.toLowerCase().includes(srch)||i[nf].toLowerCase().includes(srch))&&(!sta||i.status===sta))
     .map(i=>`<tr><td style="color:#185FA5;font-weight:600;cursor:pointer" onclick="editDoc('${type}','${i.id}')">${i.id}</td>
-    <td>${i[nf]}</td><td>${i.date}</td><td>${i.due||'—'}</td><td>${fmt(i.total)}</td><td>${sb(i.status)}</td>
+    <td>${i[nf]}</td><td>${i.date}</td><td>${i.due||'-'}</td><td>${fmt(i.total)}</td><td>${sb(i.status)}</td>
     <td><div class="action-row">
       <button class="btn btn-sm" onclick="editDoc('${type}','${i.id}')">Edit</button>
-      <button class="btn btn-sm" onclick="exportPDF('${type}','${i.id}')">↓ PDF</button>
-      <button class="btn btn-sm btn-primary" onclick="openEmail('${type}','${i.id}')">✉ Email</button>
+      <button class="btn btn-sm" onclick="exportPDF('${type}','${i.id}')">&#8595; PDF</button>
+      <button class="btn btn-sm btn-primary" onclick="openEmail('${type}','${i.id}')">&#9993; Email</button>
       <button class="btn btn-sm btn-danger" onclick="delDoc('${type}','${i.id}')">Delete</button>
     </div></td></tr>`).join('')||`<tr><td colspan="7" style="text-align:center;padding:2rem;color:#9ca3af">No records found</td></tr>`;
 }
@@ -323,9 +332,9 @@ function renderEditor(){
   const items=doc.items||[];
   const sub=calcSub(items),tax=sub*.18,tot=sub+tax;
   return`<div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem">
-    <button class="btn btn-sm btn-ghost" onclick="goBack()">← Back</button>
+    <button class="btn btn-sm btn-ghost" onclick="goBack()">&#8592; Back</button>
     <span style="font-size:12px;color:#9ca3af">${doc.id||'New Document'}</span>
-    ${doc.id?`<button class="btn btn-sm btn-green" onclick="exportPDF('${doc._t}','${doc.id}',true)">↓ Export PDF</button><button class="btn btn-sm btn-primary" onclick="openEmail('${doc._t}','${doc.id}',true)">✉ Send Email</button>`:''}
+    ${doc.id?`<button class="btn btn-sm btn-green" onclick="exportPDF('${doc._t}','${doc.id}',true)">&#8595; Export PDF</button><button class="btn btn-sm btn-primary" onclick="openEmail('${doc._t}','${doc.id}',true)">&#9993; Send Email</button>`:''}
   </div>
   <div class="card">
     <div class="form-row form-3">
@@ -370,7 +379,7 @@ function lrow(it,i){
   <td><input value="${it.unit||''}" oninput="upLine(${i},'unit',this.value)" placeholder="Nos" style="text-align:center"></td>
   <td><input type="number" value="${it.price||0}" min="0" step="0.01" oninput="upLine(${i},'price',this.value)" style="text-align:right"></td>
   <td style="text-align:right;font-weight:600;padding-right:9px" id="lt-${i}">${fmt(lt)}</td>
-  <td><button class="btn btn-sm btn-danger" onclick="rmLine(${i})" style="padding:3px 8px">×</button></td></tr>`;
+  <td><button class="btn btn-sm btn-danger" onclick="rmLine(${i})" style="padding:3px 8px">x</button></td></tr>`;
 }
 
 function upLine(i,f,v){
@@ -410,7 +419,7 @@ function collectFields(){
 
 function renderVendorEd(){
   const v=S.editDoc;
-  return`<div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem"><button class="btn btn-sm btn-ghost" onclick="goBack()">← Back</button></div>
+  return`<div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem"><button class="btn btn-sm btn-ghost" onclick="goBack()">&#8592; Back</button></div>
   <div class="card" style="max-width:600px">
     <div class="form-row form-2"><div><label>Company Name</label><input id="f-name" value="${v.name||''}"></div><div><label>GSTIN</label><input id="f-gstin" value="${v.gstin||''}" placeholder="e.g. 07AABCO1234P1ZX"></div></div>
     <div class="form-row form-2"><div><label>Contact Person</label><input id="f-contact" value="${v.contact||''}"></div><div><label>Email</label><input id="f-email" value="${v.email||''}"></div></div>
@@ -422,7 +431,7 @@ function renderVendorEd(){
 
 function renderProductEd(){
   const p=S.editDoc;
-  return`<div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem"><button class="btn btn-sm btn-ghost" onclick="goBack()">← Back</button></div>
+  return`<div style="display:flex;gap:10px;align-items:center;margin-bottom:1rem"><button class="btn btn-sm btn-ghost" onclick="goBack()">&#8592; Back</button></div>
   <div class="card" style="max-width:600px">
     <div class="form-row form-2"><div><label>Product / Service Name</label><input id="f-name" value="${p.name||''}"></div><div><label>HSN / SAC Code</label><input id="f-hsn" value="${p.hsn||''}" placeholder="e.g. 998314"></div></div>
     <div class="form-row form-3"><div><label>Category</label><select id="f-cat"><option ${p.category==='Services'?'selected':''}>Services</option><option ${p.category==='Hardware'?'selected':''}>Hardware</option><option ${p.category==='Recurring'?'selected':''}>Recurring</option><option ${p.category==='Other'?'selected':''}>Other</option></select></div><div><label>Unit</label><input id="f-unit" value="${p.unit||'unit'}" placeholder="unit / hour / project"></div><div><label>Default Price (₹)</label><input id="f-price" type="number" value="${p.price||0}"></div></div>
@@ -434,14 +443,14 @@ function renderProductEd(){
 
 function renderVendors(){
   return`<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Company</th><th>GSTIN</th><th>Address</th><th>Contact</th><th>Email</th><th>Phone</th><th>Terms</th><th>Actions</th></tr></thead><tbody>
-  ${S.vendors.map(v=>`<tr><td style="color:#185FA5;font-weight:600">${v.id}</td><td>${v.name}</td><td style="font-size:11px">${v.gstin||'—'}</td><td style="font-size:11px;max-width:180px">${v.address||'—'}</td><td>${v.contact}</td><td>${v.email}</td><td>${v.phone}</td><td>${v.terms}</td>
+  ${S.vendors.map(v=>`<tr><td style="color:#185FA5;font-weight:600">${v.id}</td><td>${v.name}</td><td style="font-size:11px">${v.gstin||'-'}</td><td style="font-size:11px;max-width:180px">${v.address||'-'}</td><td>${v.contact}</td><td>${v.email}</td><td>${v.phone}</td><td>${v.terms}</td>
   <td><div class="action-row"><button class="btn btn-sm" onclick="editDoc('vendor','${v.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="delDoc('vendor','${v.id}')">Delete</button></div></td></tr>`).join('')}
   </tbody></table></div>`;
 }
 
 function renderProducts(){
   return`<div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>HSN/SAC</th><th>Category</th><th>Unit</th><th>Price</th><th>Description</th><th>Actions</th></tr></thead><tbody>
-  ${S.products.map(p=>`<tr><td style="color:#185FA5;font-weight:600">${p.id}</td><td>${p.name}</td><td style="font-size:11px">${p.hsn||'—'}</td><td>${p.category}</td><td>${p.unit}</td><td>${fmt(p.price)}</td><td style="font-size:11px;max-width:200px;color:#6b7280">${p.desc||'—'}</td>
+  ${S.products.map(p=>`<tr><td style="color:#185FA5;font-weight:600">${p.id}</td><td>${p.name}</td><td style="font-size:11px">${p.hsn||'-'}</td><td>${p.category}</td><td>${p.unit}</td><td>${fmt(p.price)}</td><td style="font-size:11px;max-width:200px;color:#6b7280">${p.desc||'-'}</td>
   <td><div class="action-row"><button class="btn btn-sm" onclick="editDoc('product','${p.id}')">Edit</button><button class="btn btn-sm btn-danger" onclick="delDoc('product','${p.id}')">Delete</button></div></td></tr>`).join('')}
   </tbody></table></div>`;
 }
@@ -459,7 +468,7 @@ function renderSettings(){
   </div>
   <div class="card">
     <div style="font-size:14px;font-weight:600;margin-bottom:.75rem">Office 365 Email (Microsoft Graph API)</div>
-    <p style="font-size:12.5px;color:#6b7280;margin-bottom:1rem;line-height:1.6">Enter your Microsoft Graph API access token to send emails directly from your Office 365 mailbox. The PDF will be auto-attached. <a href="https://learn.microsoft.com/en-us/graph/auth-overview" target="_blank">How to get a token ↗</a></p>
+    <p style="font-size:12.5px;color:#6b7280;margin-bottom:1rem;line-height:1.6">Enter your Microsoft Graph API access token to send emails directly from your Office 365 mailbox. The PDF will be auto-attached. <a href="https://learn.microsoft.com/en-us/graph/auth-overview" target="_blank">How to get a token &#8599;</a></p>
     <div class="form-group"><label>From Email Address (your O365 mailbox)</label><input id="s-o365from" value="${s.o365From}" placeholder="you@cloudamaze.in"></div>
     <div class="form-group"><label>Microsoft Graph Access Token</label><textarea id="s-o365tok" rows="3" style="font-family:monospace;font-size:11.5px" placeholder="eyJ0eX...">${s.o365Token}</textarea></div>
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -478,13 +487,13 @@ function saveSettings(){
   S.settings.orgPhone=document.getElementById('s-phone').value;
   S.settings.orgAddress=document.getElementById('s-addr').value;
   fbSaveSettings(S.settings);
-  toast('Settings saved & synced ✓');
+  toast('Settings saved & synced!');
 }
 function saveO365(){
   S.settings.o365From=document.getElementById('s-o365from').value;
   S.settings.o365Token=document.getElementById('s-o365tok').value;
   fbSaveSettings(S.settings);
-  toast('Email settings saved & synced ✓');
+  toast('Email settings saved & synced!');
 }
 async function testO365(){
   const tok=document.getElementById('s-o365tok').value.trim();
@@ -493,7 +502,7 @@ async function testO365(){
   try{
     const r=await fetch('https://graph.microsoft.com/v1.0/me',{headers:{Authorization:'Bearer '+tok}});
     if(r.ok){const d=await r.json();toast('Connected as: '+(d.displayName||d.mail||from));}
-    else toast('Authentication failed — check your token',true);
+    else toast('Authentication failed - check your token',true);
   }catch(e){toast('Connection error: '+e.message,true);}
 }
 
@@ -523,7 +532,7 @@ async function saveDoc(){
   if(ex<0){ doc.id=isQ?`Q-${String(qNum++).padStart(3,'0')}`:`PO-${String(pNum++).padStart(3,'0')}`; arr.push({...doc}); }
   else{ const{_t,...clean}=doc; arr[ex]=clean; }
   await fbSaveDoc(doc,isQ);
-  S.editDoc=null;toast('Saved & synced ✓');render();
+  S.editDoc=null;toast('Saved & synced!');render();
 }
 async function saveVendor(){
   const v=S.editDoc;
@@ -537,7 +546,7 @@ async function saveVendor(){
   const arr=S.vendors,ex=arr.findIndex(x=>x.id===v.id);
   if(ex>=0){const{_t,...c}=v;arr[ex]=c;}else{v.id=`V-00${arr.length+1}`;const{_t,...c}=v;arr.push(c);}
   await fbSaveVendor(v);
-  S.editDoc=null;toast('Vendor saved & synced ✓');render();
+  S.editDoc=null;toast('Vendor saved & synced!');render();
 }
 async function saveProduct(){
   const p=S.editDoc;
@@ -551,7 +560,7 @@ async function saveProduct(){
   const arr=S.products,ex=arr.findIndex(x=>x.id===p.id);
   if(ex>=0){const{_t,...c}=p;arr[ex]=c;}else{p.id=`P-00${arr.length+1}`;const{_t,...c}=p;arr.push(c);}
   await fbSaveProduct(p);
-  S.editDoc=null;toast('Product saved & synced ✓');render();
+  S.editDoc=null;toast('Product saved & synced!');render();
 }
 async function delDoc(type,id){
   if(!confirm('Delete this record? This cannot be undone.'))return;
@@ -612,7 +621,7 @@ function buildPDF(doc,type){
   if(vendorGstin){pdf.setFont('helvetica','bold');pdf.text('GSTIN:',ml,y);pdf.setFont('helvetica','normal');pdf.text(vendorGstin,ml+24,y);y+=5;}
   const rx=W-mr,ry=y-10;
   pdf.setFont('helvetica','bold');pdf.text('Date:',rx-52,ry);pdf.setFont('helvetica','normal');pdf.text(doc.date||'',rx-30,ry);
-  pdf.setFont('helvetica','bold');pdf.text(isQ?'Expiry:':'Delivery:',rx-52,ry+5.5);pdf.setFont('helvetica','normal');pdf.text(doc.due||'—',rx-30,ry+5.5);
+  pdf.setFont('helvetica','bold');pdf.text(isQ?'Expiry:':'Delivery:',rx-52,ry+5.5);pdf.setFont('helvetica','normal');pdf.text(doc.due||'-',rx-30,ry+5.5);
   if(doc.ref){pdf.setFont('helvetica','bold');pdf.text('Ref:',rx-52,ry+11);pdf.setFont('helvetica','normal');pdf.text(doc.ref,rx-30,ry+11);}
   y+=5;
 
@@ -708,18 +717,18 @@ function openEmail(type,id,fromEdit=false){
 
   document.getElementById('modal-root').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
-    <div class="modal-hdr"><span class="modal-title">✉ Send via Office 365</span><button class="close-btn" onclick="closeModal()">×</button></div>
-    ${!S.settings.o365Token?`<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:12.5px">⚠️ Office 365 not configured yet. <button class="btn btn-sm" onclick="closeModal();nav('settings')" style="margin-left:8px">Configure now →</button></div>`:''}
+    <div class="modal-hdr"><span class="modal-title">Email: Send via Office 365</span><button class="close-btn" onclick="closeModal()">X</button></div>
+    ${!S.settings.o365Token?`<div style="background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:12.5px">Office 365 not configured yet. <button class="btn btn-sm" onclick="closeModal();nav('settings')" style="margin-left:8px">Configure now</button></div>`:''}
     <div class="form-row form-2"><div><label>From</label><input id="em-from" value="${S.settings.o365From}" placeholder="your@cloudamaze.in"></div><div><label>To</label><input id="em-to" value="${toEmail}" placeholder="recipient@example.com"></div></div>
     <div class="form-group"><label>CC (optional)</label><input id="em-cc" value="" placeholder="cc@example.com"></div>
     <div class="form-group"><label>Subject</label><input id="em-sub" value="${sub}"></div>
     <div class="form-group"><label>Message</label><textarea id="em-body" rows="8" style="line-height:1.6;font-size:12.5px">${body}</textarea></div>
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;color:#166534;display:flex;align-items:center;gap:8px">
-      📎 The PDF with your Cloudamaze logo will be automatically generated and attached.
+      PDF attachment: The PDF with your Cloudamaze logo will be automatically generated and attached.
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="send-btn" onclick="sendEmail('${type}','${doc.id||''}',${fromEdit})">✉ Send via Office 365</button>
+      <button class="btn btn-primary" id="send-btn" onclick="sendEmail('${type}','${doc.id||''}',${fromEdit})">Email: Send via Office 365</button>
     </div>
   </div></div>`;
 }
@@ -736,7 +745,7 @@ async function sendEmail(type,id,fromEdit){
   if(!from){toast('Please set your From email in Settings.',true);return;}
   const doc=fromEdit?S.editDoc:(type==='quote'?S.quotes:S.pos).find(x=>x.id===id);
   const btn=document.getElementById('send-btn');
-  if(btn){btn.textContent='Sending…';btn.disabled=true;}
+  if(btn){btn.textContent='Sending...';btn.disabled=true;}
   try{
     let pdfBase64='';
     if(doc&&window.jspdf){const pdf=buildPDF(doc,type);pdfBase64=pdf.output('datauristring').split(',')[1];}
@@ -758,9 +767,9 @@ async function sendEmail(type,id,fromEdit){
     }else{
       const err=await r.json().catch(()=>({}));
       toast('Send failed: '+(err?.error?.message||r.statusText),true);
-      if(btn){btn.innerHTML='✉ Send via Office 365';btn.disabled=false;}
+      if(btn){btn.innerHTML='Send via Office 365';btn.disabled=false;}
     }
-  }catch(e){toast('Error: '+e.message,true);if(btn){btn.innerHTML='✉ Send via Office 365';btn.disabled=false;}}
+  }catch(e){toast('Error: '+e.message,true);if(btn){btn.innerHTML='Send via Office 365';btn.disabled=false;}}
 }
 
 function closeModal(){document.getElementById('modal-root').innerHTML='';}
@@ -856,9 +865,7 @@ async function fbDelDoc(col, fbid){
 
 async function bootstrap(){
   setSyncDot('connecting');
-  // Show loading screen while Firebase connects
-  var c=document.getElementById('content');
-  if(c) c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:#6b7280"><div style="width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#185FA5;border-radius:50%;animation:spin .7s linear infinite"></div><span style="font-size:13px">Connecting to database...</span></div>';
+  render(); // Render immediately with local data - Firebase will update in background
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
