@@ -5,152 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QuotePro — Cloudamaze India Private Limited</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ── PASTE YOUR FIREBASE CONFIG HERE ─────────────────────────────────────────
-const firebaseConfig = {
-  apiKey:            window._FB_API_KEY            || "AIzaSyDbyuIamlH6oTxleixizr9MB3ViGfTB5kY",
-  authDomain:        window._FB_AUTH_DOMAIN        || "cloudamaze-quotepro.firebaseapp.com",
-  projectId:         window._FB_PROJECT_ID         || "cloudamaze-quotepro",
-  storageBucket:     window._FB_STORAGE_BUCKET     || "cloudamaze-quotepro.firebasestorage.app",
-  messagingSenderId: window._FB_MESSAGING_SENDER   || "368406215939",
-  appId:             window._FB_APP_ID             || "1:368406215939:web:b27f39319550e456003d36"
-};
-// ────────────────────────────────────────────────────────────────────────────
-
-const app  = initializeApp(firebaseConfig);
-const db   = getFirestore(app);
-window._db = db;
-
-// Collections
-const COLS = { quotes:'quotes', pos:'purchaseOrders', vendors:'vendors', products:'products', settings:'settings' };
-
-// ── Firestore helpers ────────────────────────────────────────────────────────
-async function fbSave(col, id, data){
-  try{
-    const ref = doc(db, col, id);
-    await setDoc(ref, {...data, _updated: serverTimestamp()});
-    return true;
-  }catch(e){ console.error('fbSave',e); return false; }
-}
-
-async function fbAdd(col, data){
-  try{
-    const ref = await addDoc(collection(db, col), {...data, _updated: serverTimestamp()});
-    return ref.id;
-  }catch(e){ console.error('fbAdd',e); return null; }
-}
-
-async function fbDelete(col, id){
-  try{ await deleteDoc(doc(db, col, id)); return true; }
-  catch(e){ console.error('fbDelete',e); return false; }
-}
-
-function fbListen(col, cb){
-  return onSnapshot(collection(db, col), snap=>{
-    cb(snap.docs.map(d=>({...d.data(), _fbid:d.id})));
-  });
-}
-
-async function fbLoadSettings(){
-  try{
-    const snap = await getDoc(doc(db, 'settings', 'org'));
-    return snap.exists() ? snap.data() : null;
-  }catch(e){ return null; }
-}
-
-// ── Expose to global scope for use in main script ────────────────────────────
-window._fb = { fbSave, fbAdd, fbDelete, fbListen, fbLoadSettings, COLS };
-
-// ── Bootstrap: load all data then init app ───────────────────────────────────
-async function bootstrap(){
-  try {
-    // Show connecting state
-    window._fbReady = false;
-    // Load settings
-    const settings = await fbLoadSettings();
-    if(settings) {
-      const {_updated, ...clean} = settings;
-      Object.assign(S.settings, clean);
-    }
-    window._fbReady = true;
-    // Start real-time listeners
-    window._fb.fbListen(COLS.quotes, rows=>{
-      S.quotes = rows.map(({_fbid,_updated,...r})=>({...r,_fbid}));
-      if(S.page==='quotes'||S.page==='dashboard') safeRender();
-    });
-    window._fb.fbListen(COLS.pos, rows=>{
-      S.pos = rows.map(({_fbid,_updated,...r})=>({...r,_fbid}));
-      if(S.page==='pos'||S.page==='dashboard') safeRender();
-    });
-    window._fb.fbListen(COLS.vendors, rows=>{
-      S.vendors = rows.map(({_fbid,_updated,...r})=>({...r,_fbid}));
-      if(S.page==='vendors') safeRender();
-    });
-    window._fb.fbListen(COLS.products, rows=>{
-      S.products = rows.map(({_fbid,_updated,...r})=>({...r,_fbid}));
-      if(S.page==='products') safeRender();
-    });
-    setSyncDot('live');
-    render();
-  } catch(e){
-    console.error('Firebase bootstrap error:', e);
-    setSyncDot('error');
-    render(); // fall back to local data
-  }
-}
-
-function safeRender(){ if(!S.editDoc) render(); }
-
-function setSyncDot(state){
-  const dot=document.getElementById('sync-dot');
-  const lbl=document.getElementById('sync-lbl');
-  if(!dot||!lbl) return;
-  if(state==='live'){dot.style.background='#1D9E75';lbl.textContent='Live sync';}
-  else if(state==='saving'){dot.style.background='#F59E0B';lbl.textContent='Saving…';}
-  else if(state==='error'){dot.style.background='#991b1b';lbl.textContent='Offline mode';}
-}
-window.setSyncDot = setSyncDot;
-
-// ── Override save/delete functions to use Firebase ───────────────────────────
-window._fbSaveDoc = async function(doc, isQ){
-  setSyncDot('saving');
-  const {_t,_fbid,...data} = doc;
-  const col = isQ ? COLS.quotes : COLS.pos;
-  if(_fbid){ await window._fb.fbSave(col, _fbid, data); }
-  else { const newId = await window._fb.fbAdd(col, data); if(newId) doc._fbid=newId; }
-  setSyncDot('live');
-};
-window._fbSaveVendor = async function(v){
-  setSyncDot('saving');
-  const {_t,_fbid,...data} = v;
-  if(_fbid){ await window._fb.fbSave(COLS.vendors, _fbid, data); }
-  else { await window._fb.fbAdd(COLS.vendors, data); }
-  setSyncDot('live');
-};
-window._fbSaveProduct = async function(p){
-  setSyncDot('saving');
-  const {_t,_fbid,...data} = p;
-  if(_fbid){ await window._fb.fbSave(COLS.products, _fbid, data); }
-  else { await window._fb.fbAdd(COLS.products, data); }
-  setSyncDot('live');
-};
-window._fbDelDoc = async function(col, fbid){
-  setSyncDot('saving');
-  await window._fb.fbDelete(col, fbid);
-  setSyncDot('live');
-};
-window._fbSaveSettings = async function(settings){
-  setSyncDot('saving');
-  await window._fb.fbSave('settings','org', settings);
-  setSyncDot('live');
-};
-
-// Wait for DOM then bootstrap
-document.addEventListener('DOMContentLoaded', ()=>{ bootstrap(); });
-</script>
+<!-- Firebase Compat SDK (works without type=module) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -351,6 +208,117 @@ function toast(msg,err=false){
   r.innerHTML=`<div class="toast${err?' error':''}">${msg}</div>`;
   setTimeout(()=>r.innerHTML='',3200);
 }
+
+// ── Firebase Config & Init ───────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyDbyuIamlH6oTxleixizr9MB3ViGfTB5kY",
+  authDomain:        "cloudamaze-quotepro.firebaseapp.com",
+  projectId:         "cloudamaze-quotepro",
+  storageBucket:     "cloudamaze-quotepro.firebasestorage.app",
+  messagingSenderId: "368406215939",
+  appId:             "1:368406215939:web:b27f39319550e456003d36"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const COLS = { quotes:'quotes', pos:'purchaseOrders', vendors:'vendors', products:'products' };
+
+function setSyncDot(state){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-lbl');
+  if(!dot||!lbl)return;
+  if(state==='live'){dot.style.background='#1D9E75';lbl.textContent='Live sync';}
+  else if(state==='saving'){dot.style.background='#F59E0B';lbl.textContent='Saving…';}
+  else if(state==='error'){dot.style.background='#ef4444';lbl.textContent='Offline';}
+}
+
+// ── Firestore save/delete helpers ────────────────────────────────────────────
+async function fbSet(col, id, data){
+  const {_t,_fbid,...clean}=data;
+  try{ await db.collection(col).doc(id).set({...clean,_updated:firebase.firestore.FieldValue.serverTimestamp()});return true; }
+  catch(e){ console.error(e);return false; }
+}
+async function fbAdd(col, data){
+  const {_t,_fbid,...clean}=data;
+  try{ const r=await db.collection(col).add({...clean,_updated:firebase.firestore.FieldValue.serverTimestamp()});return r.id; }
+  catch(e){ console.error(e);return null; }
+}
+async function fbDel(col, id){
+  try{ await db.collection(col).doc(id).delete();return true; }
+  catch(e){ console.error(e);return false; }
+}
+
+
+// ── Bootstrap: start listeners & render ─────────────────────────────────────
+async function bootstrap(){
+  // Always render first so UI is visible immediately
+  render();
+  try{
+    // Load settings from Firestore
+    const snap = await db.collection('settings').doc('org').get();
+    if(snap.exists){
+      const {_updated,...clean}=snap.data();
+      Object.assign(S.settings,clean);
+    }
+    // Real-time listeners - update data and re-render when Firestore changes
+    db.collection(COLS.quotes).onSnapshot(snap=>{
+      S.quotes=snap.docs.map(d=>({...d.data(),_fbid:d.id})).map(({_updated,...r})=>r);
+      if(!S.editDoc&&(S.page==='quotes'||S.page==='dashboard'))render();
+    });
+    db.collection(COLS.pos).onSnapshot(snap=>{
+      S.pos=snap.docs.map(d=>({...d.data(),_fbid:d.id})).map(({_updated,...r})=>r);
+      if(!S.editDoc&&(S.page==='pos'||S.page==='dashboard'))render();
+    });
+    db.collection(COLS.vendors).onSnapshot(snap=>{
+      S.vendors=snap.docs.map(d=>({...d.data(),_fbid:d.id})).map(({_updated,...r})=>r);
+      if(!S.editDoc&&S.page==='vendors')render();
+    });
+    db.collection(COLS.products).onSnapshot(snap=>{
+      S.products=snap.docs.map(d=>({...d.data(),_fbid:d.id})).map(({_updated,...r})=>r);
+      if(!S.editDoc&&S.page==='products')render();
+    });
+    setSyncDot('live');
+  }catch(e){
+    console.error('Firebase error:',e);
+    setSyncDot('error');
+  }
+}
+
+// ── Override save functions ──────────────────────────────────────────────────
+async function fbSaveDoc(docObj,isQ){
+  setSyncDot('saving');
+  const col=isQ?COLS.quotes:COLS.pos;
+  const {_t,_fbid,...data}=docObj;
+  if(_fbid){ await fbSet(col,_fbid,data); }
+  else{ const id=await fbAdd(col,data); if(id)docObj._fbid=id; }
+  setSyncDot('live');
+}
+async function fbSaveVendor(v){
+  setSyncDot('saving');
+  const {_t,_fbid,...data}=v;
+  if(_fbid){ await fbSet(COLS.vendors,_fbid,data); }
+  else{ await fbAdd(COLS.vendors,data); }
+  setSyncDot('live');
+}
+async function fbSaveProduct(p){
+  setSyncDot('saving');
+  const {_t,_fbid,...data}=p;
+  if(_fbid){ await fbSet(COLS.products,_fbid,data); }
+  else{ await fbAdd(COLS.products,data); }
+  setSyncDot('live');
+}
+async function fbSaveSettings(s){
+  setSyncDot('saving');
+  try{ await db.collection('settings').doc('org').set({...s,_updated:firebase.firestore.FieldValue.serverTimestamp()}); }
+  catch(e){ console.error(e); }
+  setSyncDot('live');
+}
+async function fbDelDoc(col,id){
+  setSyncDot('saving');
+  await fbDel(col,id);
+  setSyncDot('live');
+}
+// ────────────────────────────────────────────────────────────────────────────
 
 function nav(page){
   S.page=page;S.editDoc=null;
@@ -614,13 +582,13 @@ function saveSettings(){
   S.settings.orgEmail=document.getElementById('s-email').value;
   S.settings.orgPhone=document.getElementById('s-phone').value;
   S.settings.orgAddress=document.getElementById('s-addr').value;
-  if(window._fbSaveSettings){ window._fbSaveSettings(S.settings); }
+  fbSaveSettings(S.settings);
   toast('Settings saved & synced ✓');
 }
 function saveO365(){
   S.settings.o365From=document.getElementById('s-o365from').value;
   S.settings.o365Token=document.getElementById('s-o365tok').value;
-  if(window._fbSaveSettings){ window._fbSaveSettings(S.settings); }
+  fbSaveSettings(S.settings);
   toast('Email settings saved & synced ✓');
 }
 async function testO365(){
@@ -659,7 +627,7 @@ async function saveDoc(){
   const ex=arr.findIndex(x=>x.id===doc.id);
   if(ex<0){ doc.id=isQ?`Q-${String(qNum++).padStart(3,'0')}`:`PO-${String(pNum++).padStart(3,'0')}`; arr.push({...doc}); }
   else{ const{_t,...clean}=doc; arr[ex]=clean; }
-  if(window._fbSaveDoc){ await window._fbSaveDoc(doc,isQ); }
+  await fbSaveDoc(doc,isQ);
   S.editDoc=null;toast('Saved & synced ✓');render();
 }
 async function saveVendor(){
@@ -673,7 +641,7 @@ async function saveVendor(){
   v.address=document.getElementById('f-address').value;
   const arr=S.vendors,ex=arr.findIndex(x=>x.id===v.id);
   if(ex>=0){const{_t,...c}=v;arr[ex]=c;}else{v.id=`V-00${arr.length+1}`;const{_t,...c}=v;arr.push(c);}
-  if(window._fbSaveVendor){ await window._fbSaveVendor(v); }
+  await fbSaveVendor(v);
   S.editDoc=null;toast('Vendor saved & synced ✓');render();
 }
 async function saveProduct(){
@@ -687,7 +655,7 @@ async function saveProduct(){
   p.notes=document.getElementById('f-notes').value;
   const arr=S.products,ex=arr.findIndex(x=>x.id===p.id);
   if(ex>=0){const{_t,...c}=p;arr[ex]=c;}else{p.id=`P-00${arr.length+1}`;const{_t,...c}=p;arr.push(c);}
-  if(window._fbSaveProduct){ await window._fbSaveProduct(p); }
+  await fbSaveProduct(p);
   S.editDoc=null;toast('Product saved & synced ✓');render();
 }
 async function delDoc(type,id){
@@ -699,7 +667,7 @@ async function delDoc(type,id){
   else if(type==='po')S.pos=S.pos.filter(x=>x.id!==id);
   else if(type==='vendor')S.vendors=S.vendors.filter(x=>x.id!==id);
   else S.products=S.products.filter(x=>x.id!==id);
-  if(window._fbDelDoc && item?._fbid){ await window._fbDelDoc(colMap[type], item._fbid); }
+  if(item?._fbid){ await fbDelDoc(colMap[type], item._fbid); }
   render();toast('Deleted');
 }
 
@@ -902,7 +870,8 @@ async function sendEmail(type,id,fromEdit){
 
 function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
-render();
+// Start the app
+window.addEventListener('load', bootstrap);
 </script>
 </body>
 </html>
